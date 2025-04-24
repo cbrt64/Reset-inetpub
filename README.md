@@ -4,7 +4,7 @@
 
 If, like me, you deleted this folder before realizing its purpose in addressing security concerns, this guide is for you.
 
-The procedure outlined here enables you to restore the folder and configure the appropriate permissions (at least for the parent folder), without requiring IIS to be enabled and disabled.
+The procedure outlined here enables you to restore the folder and configure the appropriate permissions (at least for the parent folder), without needing to enable and disable IIS.
 
 Please note: **Administrator privileges are required**.
 

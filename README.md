@@ -6,7 +6,10 @@ If, like me, you deleted this folder before realizing its purpose in addressing 
 
 The procedure outlined here enables you to restore the folder and configure the appropriate permissions (at least for the parent folder), without needing to enable and disable IIS.
 
-Please note: **Administrator privileges are required**.
+Please note: 
+1. **Administrator privileges are required**.
+1. The default permissions / inheritance settings are applied to the parent folder (`%SYSTEMDRIVE%\inetpub`).
+1. Only the parent folder will have the ownership transferred to `NT AUTHORITY\SYSTEM`.
 
 ## Instructions
 

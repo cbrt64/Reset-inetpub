@@ -18,7 +18,7 @@ function Write-Status {
         $failPrefix = "[FAIL]"
         $warningPrefix = "[WARN]"
         $actionPrefix = "[>>]"
-        $infoPrefix = "[i]"
+        $infoPrefix = "[INFO]"
 
         switch ($Status.ToUpperInvariant()) {
             "ACTION" {$prefix=$actionPrefix;$colour="Blue"}
@@ -53,7 +53,7 @@ D:P(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;OI
 $targetPath = Join-Path -Path $env:SystemDrive -ChildPath "inetpub"
 
 try {
-    # Create the directory if it doesn't exist.
+    # Directory doesn't exist.
     if (-not(Test-Path -Path $targetPath -PathType Container)) {
         try {
             Write-Status -Status ACTION -Message "Creating directory '$targetPath'..."
@@ -63,12 +63,20 @@ try {
         catch {
             throw "Unable to to create directory: $targetPath"
         }
+    # Directory exists and has children.
+    } elseif (Get-ChildItem -Path $targetPath -ErrorAction SilentlyContinue) {
+        Write-Status -Status WARN -Message "'$targetPath' is not empty!"
+        Write-Status -Status WARN -Message "Please note that whilst permissions that we set for the parent folder will inherit by default, the script will only set 'NT AUTHORITY\SYSTEM' as the owner of the parent directory ($targetPath)."
+        Write-Status -Status WARN -Message "This is to prevent any potential issues with permissions that have been manually applied."
+        Write-Status -Status INFO -Message "Please press any key to acknowledge..."
+        $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    # Directory exists and is empty.
     } else {
-        Write-Status -Status OK -Message "Target directory '$targetPath' already exists."
+        Write-Status -Status OK -Message "'$targetPath' exists and is empty."
     }
 
     try {
-        Write-Status -Status ACTION -Message "importing necessary permissions..."
+        Write-Status -Status ACTION -Message "Importing necessary permissions..."
 
         # Create a temporary file for use with icacls restore.
         $aclFile = New-TemporaryFile -ErrorAction Stop
@@ -87,7 +95,7 @@ try {
         $aclFile | Remove-Item -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Status -Status ACTION -Message "Setting owner to 'NT AUTHORITY\SYSTEM'..."
+    Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to 'NT AUTHORITY\SYSTEM'..."
 
     try {
         # Set the owner of inetpub to 'NT AUTHORITY\SYSTEM'.

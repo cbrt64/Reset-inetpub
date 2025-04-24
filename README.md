@@ -24,6 +24,12 @@ Please note:
 1. Assign ownership of the directory to `NT AUTHORITY\SYSTEM`.
 
 ## Permissions
+The following permissions are captured from the empty `inetpub` directory (created by [KB5055523](https://support.microsoft.com/en-gb/topic/april-8-2025-kb5055523-os-build-26100-3775-277a9d11-6ebf-410c-99f7-8c61957461eb)).
+
+**`icacls` export:** see [acls.txt](acls.txt)
+
+**`icacls` permission summary:**
+
     C:\inetpub NT SERVICE\TrustedInstaller:(F)
            NT SERVICE\TrustedInstaller:(OI)(CI)(IO)(F)
            NT AUTHORITY\SYSTEM:(F)

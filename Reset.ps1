@@ -53,12 +53,15 @@ D:P(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;OI
 # SYSTEMDRIVE:\inetpub
 $targetPath = Join-Path -Path $env:SystemDrive -ChildPath "inetpub"
 
+$newDirectoryCreated = $false
+
 try {
     # Create the directory if it doesn't exist.
-    if (!(Test-Path -Path $targetPath -PathType Container)) {
+    if (-not(Test-Path -Path $targetPath -PathType Container)) {
         try {
             Write-Status -Status ACTION -Message "Creating directory '$targetPath'..."
             New-Item -Path $targetPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
+            $newDirectoryCreated = $true
             Write-Status -Status OK -Message "Directory created."
         }
         catch {
@@ -68,14 +71,14 @@ try {
         Write-Status -Status OK -Message "Target directory '$targetPath' already exists."
     }
 
-    Write-Status -Status ACTION -Message "Taking ownership of '$targetPath'..."
-
-    # Transfer ownership of the directory to the "Administrators" group.
-    $result = takeown /F $targetPath /A /R /D Y 2>&1
-
-    if ($LASTEXITCODE -ne 0) { throw $result }
-
-    Write-Status -Status OK -Message "Ownership successfully granted to the Administrators group."
+    # If the folder already existed, assign ownership to the Administrators group.
+    # If we fail to do this, it may not be possible to apply the necessary permissions.
+    if (-not $newDirectoryCreated) {
+        Write-Status -Status ACTION -Message "Taking ownership of '$targetPath'..."
+        $result = takeown /F $targetPath /A /R /D Y 2>&1
+        if ($LASTEXITCODE -ne 0) { throw $result }
+        Write-Status -Status OK -Message "Ownership successfully granted to the Administrators group."
+    }
 
     try {
         Write-Status -Status ACTION -Message "importing necessary permissions..."

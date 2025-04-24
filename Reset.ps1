@@ -1,3 +1,5 @@
+#Requires -RunAsAdministrator
+
 function Write-Status {
     [CmdletBinding()]
     param (
@@ -39,89 +41,8 @@ function Write-Status {
         Write-Host $Message
 }
 
-function Test-IsAdminElevated {
-    return ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::
-            GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-}
-
-function Get-ElevatedTerminal {
-
-    param(
-        [Parameter(Mandatory=$true)]
-        [hashtable]$OriginalParameters,
-        [Parameter(Mandatory=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$ScriptPath
-    )
-
-    if (Test-IsAdminElevated) {
-        return
-    }
-
-    # Sanity check script path
-    if (!((Test-Path -Path $ScriptPath -PathType Leaf) -and $ScriptPath -match "\.ps1$" )) {
-        throw "Path not found or invalid PS1 file: $ScriptPath"
-    }
-
-    $baseArguments = @(
-        "-NoProfile",
-        "-ExecutionPolicy", "Bypass",
-        "-File", "`"$ScriptPath`""
-    )
-
-    Write-Status -Status WARN -Message "Attempting to relaunch the script with elevated privileges..."
-
-    $additionalArgs = @()
-
-    if ($OriginalParameters.Count -gt 0) {
-        foreach ($param in $OriginalParameters.GetEnumerator()){
-            $key = $param.Key
-            $value = $param.Value
-
-            if ($value -is [switch]) {
-                if ($value.IsPresent) {
-                    $additionalArgs += "-$key"
-                }
-            } elseif ($null -eq $value) {
-                $additionalArgs += "-$key"
-            } else {
-                $formattedValue = "`"$value`""
-                $additionalArgs += "-$key", $formattedValue
-            }
-        }
-    }
-
-    $cmdToRun = ""
-    $finalArgumentList = @()
-
-    if (Get-Command wt.exe -ErrorAction SilentlyContinue) {
-        $cmdToRun = "wt.exe"
-        $finalArgumentList = @(
-            "new-tab",
-            "-p",
-            "powershell",
-            "powershell.exe"
-        ) + $baseArguments + $additionalArgs
-    } else {
-        $cmdToRun = "powershell.exe"
-        $finalArgumentList = $baseArguments + $additionalArgs
-    }
-
-    try {
-        Start-Process $cmdToRun -ArgumentList $finalArgumentList -Verb RunAs -ErrorAction Stop
-        exit 0
-    }
-    catch {
-        Write-Error "Failed to start elevated process: $($_.Exception.Message)"
-        exit 1
-    }
-}
 
 Clear-Host
-
-if (-not(Test-IsAdminElevated)) {
-    Get-ElevatedTerminal -OriginalParameters $PSBoundParameters -ScriptPath $MyInvocation.MyCommand.Path
-}
 
 # Permissions as of 24/04/25
 $aclImportString = @"

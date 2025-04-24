@@ -10,8 +10,10 @@ Please note: **Administrator privileges are required**.
 
 ## Instructions
 
-1. Clone this repo (or download / extract) to your desired location.
-2. Execute `Run.bat`.
+1. Open an **elevated** PowerShell window.
+1. Run the following command:
+
+       powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/mmotti/Reset-inetpub/refs/heads/main/Reset.ps1' | iex"
 
 ## Script Actions
 1. Create `%SYSTEMDRIVE%\inetpub` if it doesn't exist.

@@ -41,7 +41,6 @@ function Write-Status {
         Write-Host $Message
 }
 
-
 Clear-Host
 
 # Permissions as of 24/04/25

@@ -16,9 +16,9 @@ Please note: **Administrator privileges are required**.
        powershell -ExecutionPolicy Bypass -Command "irm 'https://raw.githubusercontent.com/mmotti/Reset-inetpub/refs/heads/main/Reset.ps1' | iex"
 
 ## Script Actions
-1. Create `%SYSTEMDRIVE%\inetpub` if it doesn't exist.
+1. Create `%SYSTEMDRIVE%\inetpub` if it doesn't already exist.
 1. Assign temporary ownership of the directory to the `BUILTIN\Administrators` group.
-1. Import the appropriate ACL permissions.
+1. Import the appropriate ACL permissions for `%SYSTEMDRIVE%\inetpub`.
 1. Assign ownership of the directory to `NT AUTHORITY\SYSTEM`.
 
 ## Permissions

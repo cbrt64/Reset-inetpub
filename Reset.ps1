@@ -85,7 +85,7 @@ try {
         Set-Content -Value $aclImportString -Path $aclFile -Encoding unicode -Force -ErrorAction Stop
 
         # icacls "C:\" /restore path\to\file.tmp
-        $result = icacls "$env:SystemDrive\" /restore "$aclFile.FullName" 2>&1
+        $result = icacls "$env:SystemDrive\" /restore $aclFile.FullName 2>&1
 
         if ($LASTEXITCODE -ne 0) { throw $result } else {
             Write-Status -Status OK -Message "Permissions successfully imported."

@@ -90,8 +90,8 @@ try {
     Write-Status -Status ACTION -Message "Setting owner to 'NT AUTHORITY\SYSTEM'..."
 
     try {
-        # Set the owner of inetpub to 'NT AUTHORITY\SYSTEM'.
-        $result = icacls $targetPath /SetOwner "SYSTEM" 2>&1
+        # Set the owner of inetpub (and subfolders / files) to 'NT AUTHORITY\SYSTEM'.
+        $result = icacls $targetPath /SetOwner "SYSTEM" /T 2>&1
 
         if ($LASTEXITCODE -ne 0) { throw $result } else {
             Write-Status -Status OK -Message "Owner successfully changed."

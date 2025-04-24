@@ -65,7 +65,7 @@ try {
     # Directory doesn't exist.
     if (-not(Test-Path -Path $targetPath -PathType Container)) {
         try {
-            Write-Status -Status ACTION -Message "Creating directory '$targetPath'..."
+            Write-Status -Status ACTION -Message "Creating directory '$targetPath'"
             New-Item -Path $targetPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
             $aclChangeRequired = $true; $aclOwnerChangeRequired = $true
             Write-Status -Status OK -Message "Directory created." -Indent 1
@@ -76,7 +76,7 @@ try {
     # Directory exists.
     } else {
         try {
-            Write-Status -Status ACTION -Message "Checking permissions of '$targetPath'..."
+            Write-Status -Status ACTION -Message "Checking permissions of '$targetPath'"
             $currentAcl = Get-Acl -Path $targetPath -ErrorAction Stop
             if ($currentAcl.Sddl -ine $aclComparisonString) {
                 Write-Status -Status WARN -Message "Permissions require updating." -Indent 1
@@ -85,7 +85,7 @@ try {
                 Write-Status -Status OK -Message "Permissions verified." -Indent 1
             }
 
-            Write-Status -Status ACTION -Message "Checking the owner of '$targetPath'..."
+            Write-Status -Status ACTION -Message "Checking the owner of '$targetPath'"
 
             if ($currentAcl.Owner -ine $expectedOwner) {
                 Write-Status -Status WARN -Message "Ownership requires updating." -Indent 1
@@ -106,14 +106,14 @@ try {
             exit 0
         }
 
-        Write-Status -Status ACTION -Message "Checking contents of '$targetPath'..."
+        Write-Status -Status ACTION -Message "Checking contents of '$targetPath'"
 
         # If the directory isn't empty, provide a warning of the limited scope of the changes.
         if (Get-ChildItem -Path $targetPath -ErrorAction SilentlyContinue) {
             Write-Status -Status WARN -Message "'$targetPath' is not empty!" -Indent 1
             Write-Status -Status WARN -Message "Ownership change to 'NT AUTHORITY\SYSTEM' (default setting) will only apply to the parent directory ($targetPath)." -Indent 1
             Write-Status -Status WARN -Message "This is to prevent any potential issues with permissions that have been manually applied." -Indent 1
-            Write-Status -Status INFO -Message "Please press any key to acknowledge..."
+            Write-Status -Status INFO -Message "Please press any key to acknowledge"
             $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         # Directory exists and is empty.
         } else {
@@ -122,7 +122,7 @@ try {
     }
 
     try {
-        Write-Status -Status ACTION -Message "Importing necessary permissions..."
+        Write-Status -Status ACTION -Message "Importing necessary permissions"
 
         # Create a temporary file for use with icacls restore.
         $aclFile = New-TemporaryFile -ErrorAction Stop
@@ -141,14 +141,14 @@ try {
         $aclFile | Remove-Item -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to 'NT AUTHORITY\SYSTEM'..."
+    Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to 'NT AUTHORITY\SYSTEM'"
 
     try {
         # Set the owner of inetpub to 'NT AUTHORITY\SYSTEM'.
         $result = icacls $targetPath /SetOwner "SYSTEM" 2>&1
 
         if ($LASTEXITCODE -ne 0) { throw $result } else {
-            Write-Status -Status OK -Message "Owner successfully changed." -Indent 1
+            Write-Status -Status OK -Message "Owner successfully set." -Indent 1
         }
     }
     catch {
@@ -158,9 +158,9 @@ try {
     Write-Status -Status FAIL -Message $_.Exception.Message -Indent 1
     exit 1
 } finally {
-    Write-Host ("-" * 25)
+    Write-Host ("-" * 45)
     Write-Status -Status OK -Message "Script execution complete."
-    Write-Status -Status INFO -Message "Press any key to continue..."
+    Write-Host "`nPress any key to continue"
     # Pause on exit.
     $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit 0

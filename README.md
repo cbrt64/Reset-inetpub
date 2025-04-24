@@ -15,7 +15,7 @@ Please note: **Administrator privileges are required**.
 
 ## Script Actions
 1. Create `%SYSTEMDRIVE%\inetpub` if it doesn't exist.
-1. Assign temporary ownership of the directory to the ` BUILTIN\Administrators` group.
+1. Assign temporary ownership of the directory to the `BUILTIN\Administrators` group.
 1. Import the appropriate ACL permissions.
 1. Assign ownership of the directory to `NT AUTHORITY\SYSTEM`.
 

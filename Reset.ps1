@@ -111,7 +111,7 @@ try {
         # If the directory isn't empty, provide a warning of the limited scope of the changes.
         if (Get-ChildItem -Path $targetPath -ErrorAction SilentlyContinue) {
             Write-Status -Status WARN -Message "'$targetPath' is not empty!" -Indent 1
-            Write-Status -Status WARN -Message "Ownership change to 'NT AUTHORITY\SYSTEM' (default setting) will only apply to the parent directory ($targetPath)." -Indent 1
+            Write-Status -Status WARN -Message "Ownership change to '$expectedOwner' (default setting) will only apply to the parent directory ($targetPath)." -Indent 1
             Write-Status -Status WARN -Message "This is to prevent any potential issues with permissions that have been manually applied." -Indent 1
             Write-Status -Status INFO -Message "Please press any key to acknowledge..."
             $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -141,7 +141,7 @@ try {
         $aclFile | Remove-Item -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to 'NT AUTHORITY\SYSTEM'"
+    Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to '$expectedOwner'"
 
     try {
         # Set the owner of inetpub to 'NT AUTHORITY\SYSTEM'.

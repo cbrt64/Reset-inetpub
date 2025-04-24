@@ -71,11 +71,9 @@ try {
     Write-Status -Status ACTION -Message "Taking ownership of '$targetPath'..."
 
     # Transfer ownership of the directory to the "Administrators" group.
-    $null = takeown /F $targetPath /A /R /D Y
+    $result = takeown /F $targetPath /A /R /D Y 2>&1
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to take ownership of '$targetPath'. (Exit code $LASTEXITCODE). Unable to proceed."
-    }
+    if ($LASTEXITCODE -ne 0) { throw $result }
 
     Write-Status -Status OK -Message "Ownership successfully granted to the Administrators group."
 
@@ -87,13 +85,13 @@ try {
         Set-Content -Value $aclImportString -Path $aclFile -Encoding unicode -Force -ErrorAction Stop
 
         # icacls "C:\" /restore path\to\file.tmp
-        $null = icacls "$env:SystemDrive\" /restore $aclFile.FullName
+        $result = icacls "$env:SystemDrive\" /restore "$aclFile.FullName" 2>&1
 
-        if ($LASTEXITCODE -ne 0) { throw } else {
+        if ($LASTEXITCODE -ne 0) { throw $result } else {
             Write-Status -Status OK -Message "Permissions successfully imported."
         }
     } catch {
-        throw "Failed to apply permissions using Set-ACL for: '$targetPath'. Error: $($_.Exception.Message)"
+        throw "Failed to import permissions for '$targetPath'. Error $($_.Exception.Message)."
     } finally {
         # Remove the temporary file.
         $aclFile | Remove-Item -Force -ErrorAction SilentlyContinue
@@ -103,9 +101,9 @@ try {
 
     try {
         # Set the owner of inetpub to 'NT AUTHORITY\SYSTEM'.
-        $null = icacls $targetPath /SetOwner "SYSTEM"
+        $result = icacls $targetPath /SetOwner "SYSTEM" 2>&1
 
-        if ($LASTEXITCODE -ne 0) { throw } else {
+        if ($LASTEXITCODE -ne 0) { throw $result } else {
             Write-Status -Status OK -Message "Owner successfully changed."
         }
     }
@@ -113,7 +111,7 @@ try {
         throw "Failed to set owner for '$targetPath'. Error: $($_.Exception.Message)"
     }
 } catch {
-    Write-Status -Status FAIL -Message $_.Exception.Message
+    Write-Status -Status FAIL -Message $_.Exception.Message -Indent 1
     exit 1
 } finally {
     Write-Host ("-" * 25)

@@ -66,7 +66,7 @@ try {
     # Directory exists and has children.
     } elseif (Get-ChildItem -Path $targetPath -ErrorAction SilentlyContinue) {
         Write-Status -Status WARN -Message "'$targetPath' is not empty!"
-        Write-Status -Status WARN -Message "Please note that whilst permissions that we set for the parent folder will inherit by default, the script will only set 'NT AUTHORITY\SYSTEM' as the owner of the parent directory ($targetPath)."
+        Write-Status -Status WARN -Message "Ownership change to 'NT AUTHORITY\SYSTEM' (default setting) will only apply to the parent directory ($targetPath)."
         Write-Status -Status WARN -Message "This is to prevent any potential issues with permissions that have been manually applied."
         Write-Status -Status INFO -Message "Please press any key to acknowledge..."
         $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

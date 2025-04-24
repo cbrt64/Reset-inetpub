@@ -1,12 +1,12 @@
 # Reset inetpub
 
-[KB5055523](https://support.microsoft.com/en-gb/topic/april-8-2025-kb5055523-os-build-26100-3775-277a9d11-6ebf-410c-99f7-8c61957461eb) created an `inetpub` folder at `%SYSTEMDRIVE%\inetpub` due to [CVE-2025-2120](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-21204).
+[KB5055523](https://support.microsoft.com/en-gb/topic/april-8-2025-kb5055523-os-build-26100-3775-277a9d11-6ebf-410c-99f7-8c61957461eb) has introduced the creation of an `inetpub` folder at `%SYSTEMDRIVE%\inetpub` as a mitigation for [CVE-2025-2120](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-21204).
 
-If you, like myself, deleted this folder before discovering that it was created for security related concerns then this procedure is for you.
+If, like me, you deleted this folder before realizing its purpose in addressing security concerns, this guide is for you.
 
-This method allows you to restore the folder and appropriate permissions (at least to the parent folder) without the need to enable / disable IIS.
+The procedure outlined here enables you to restore the folder and configure the appropriate permissions (at least for the parent folder), without requiring IIS to be enabled and disabled.
 
-**Administrator elevation is required.**
+Please note: **Administrator privileges are required**.
 
 ## Instructions
 

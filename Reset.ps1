@@ -113,7 +113,7 @@ try {
             Write-Status -Status WARN -Message "'$targetPath' is not empty!" -Indent 1
             Write-Status -Status WARN -Message "Ownership change to 'NT AUTHORITY\SYSTEM' (default setting) will only apply to the parent directory ($targetPath)." -Indent 1
             Write-Status -Status WARN -Message "This is to prevent any potential issues with permissions that have been manually applied." -Indent 1
-            Write-Status -Status INFO -Message "Please press any key to acknowledge"
+            Write-Status -Status INFO -Message "Please press any key to acknowledge..."
             $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         # Directory exists and is empty.
         } else {
@@ -159,7 +159,7 @@ try {
     exit 1
 } finally {
     Write-Status -Status OK -Message "Script execution complete."
-    Write-Host "`nPress any key to continue"
+    Write-Host "`nPress any key to continue..."
     # Pause on exit.
     $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit 0

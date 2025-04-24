@@ -158,7 +158,6 @@ try {
     Write-Status -Status FAIL -Message $_.Exception.Message -Indent 1
     exit 1
 } finally {
-    Write-Host ("-" * 45)
     Write-Status -Status OK -Message "Script execution complete."
     Write-Host "`nPress any key to continue"
     # Pause on exit.

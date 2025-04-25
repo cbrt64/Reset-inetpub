@@ -49,13 +49,21 @@ $targetPath = Join-Path -Path $env:SystemDrive -ChildPath "inetpub"
 # Permissions as of 24/04/25
 $aclImportString = @"
 $(Split-Path -Path $targetPath -Leaf)
-D:P(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;OICIIO;GA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;FA;;;SY)(A;OICIIO;GA;;;SY)(A;;FA;;;BA)(A;OICIIO;GA;;;BA)(A;;0x1200a9;;;BU)(A;OICIIO;GXGR;;;BU)(A;OICIIO;GA;;;CO)
+D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;OICIIO;GA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;FA;;;SY)(A;OICIIO;GA;;;SY)(A;;FA;;;BA)(A;OICIIO;GA;;;BA)(A;;0x1200a9;;;BU)(A;OICIIO;GXGR;;;BU)(A;OICIIO;GA;;;CO)S:AINO_ACCESS_CONTROL
 "@
 
-# PowerShell Get-Acl Sddl string for comparison.
+# Comparison string for icacls (Get-Acl Sddl is not reliable for this).
 $aclComparisonString = @"
-O:SYG:S-1-5-21-1373595600-3792525992-3422979551-1000D:PAI(A;OICIIO;GA;;;CO)(A;OICIIO;GA;;;SY)(A;;FA;;;SY)(A;OICIIO;GA;;;BA)(A;;FA;;;BA)(A;OICIIO;GXGR;;;BU)(A;;0x1200a9;;;BU)(A;OICIIO;GA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)
-"@
+C:\inetpub NT SERVICE\TrustedInstaller:(F)
+           NT SERVICE\TrustedInstaller:(OI)(CI)(IO)(F)
+           NT AUTHORITY\SYSTEM:(F)
+           NT AUTHORITY\SYSTEM:(OI)(CI)(IO)(F)
+           BUILTIN\Administrators:(F)
+           BUILTIN\Administrators:(OI)(CI)(IO)(F)
+           BUILTIN\Users:(RX)
+           BUILTIN\Users:(OI)(CI)(IO)(GR,GE)
+           CREATOR OWNER:(OI)(CI)(IO)(F)
+"@  -replace '(?m)^[A-Z]:(\\inetpub)', "$env:SYSTEMDRIVE`$1"
 
 $aclChangeRequired = $false
 $aclOwnerChangeRequired = $false
@@ -77,8 +85,16 @@ try {
     } else {
         try {
             Write-Status -Status ACTION -Message "Checking permissions of '$targetPath'"
-            $currentAcl = Get-Acl -Path $targetPath -ErrorAction Stop
-            if ($currentAcl.Sddl -ine $aclComparisonString) {
+
+            $icaclsCurrent = icacls "$targetPath"
+            if ($LASTEXITCODE -ne 0) { throw }
+
+            # Compare against a current icacls summary as (Get-Acl).Sddl is not consistent
+            # across different machines.
+            # Skip 2 as the last two lines are blank followed by a summary.
+            $icaclsMatch = ($icaclsCurrent | Select-Object -SkipLast 2) -join [System.Environment]::NewLine -eq $aclComparisonString
+
+            if (-not $icaclsMatch) {
                 Write-Status -Status WARN -Message "Permissions require updating." -Indent 1
                 $aclChangeRequired = $true
             } else {
@@ -87,7 +103,9 @@ try {
 
             Write-Status -Status ACTION -Message "Checking the owner of '$targetPath'"
 
-            if ($currentAcl.Owner -ine $expectedOwner) {
+            $currentOwner = (Get-Acl $targetPath -ErrorAction Stop).Owner
+
+            if ($currentOwner -ine $expectedOwner) {
                 Write-Status -Status WARN -Message "Ownership requires updating." -Indent 1
                 $aclOwnerChangeRequired = $true
             } else {
@@ -96,12 +114,11 @@ try {
         }
         catch {
             Write-Status -Status WARN -Message "Unable to determine current permissions. Assuming an update is required." -Indent 1
-            $aclChangeRequired = $true
-            $aclOwnerChangeRequired = $true
+            $aclChangeRequired = $true; $aclOwnerChangeRequired = $true
         }
 
         # Early exit if we've determined that no changes are required.
-        if (-not ($aclChangeRequired -and $aclOwnerChangeRequired)) {
+        if (-not ($aclChangeRequired -or $aclOwnerChangeRequired)) {
             Write-Status -Status OK -Message "No changes are required."
             exit 0
         }

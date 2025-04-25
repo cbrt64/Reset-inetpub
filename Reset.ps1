@@ -63,7 +63,7 @@ C:\inetpub NT SERVICE\TrustedInstaller:(F)
            BUILTIN\Users:(RX)
            BUILTIN\Users:(OI)(CI)(IO)(GR,GE)
            CREATOR OWNER:(OI)(CI)(IO)(F)
-"@  -replace '(?m)^[A-Z]:(\\inetpub)', "$env:SYSTEMDRIVE`$1"
+"@  -replace '(?m)^[A-Z]:(\\inetpub)', "$env:SYSTEMDRIVE`$1" -split '\r?\n'
 
 $aclChangeRequired = $false
 $aclOwnerChangeRequired = $false
@@ -89,11 +89,13 @@ try {
             $icaclsCurrent = icacls "$targetPath"
             if ($LASTEXITCODE -ne 0) { throw }
 
-            # Compare against a current icacls summary as (Get-Acl).Sddl is not consistent across multiple machines.
-            # Skip 2 as the last two lines are blank followed by a summary.
-            $icaclsMatch = (($icaclsCurrent | Select-Object -SkipLast 2 | ForEach-Object {$_.TrimEnd()}) -join [Environment]::NewLine) -eq $aclComparisonString
 
-            if (-not $icaclsMatch) {
+            $icaclsMatch = Compare-Object -ReferenceObject ($aclComparisonString | ForEach-Object {$_.Trim()} | Where-Object {$_.Length -gt 0}) `
+                                          -DifferenceObject ($icaclsCurrent | Select-Object -SkipLast 2 | ForEach-Object {$_.Trim()} | Where-Object {$_.Length -gt 0}) `
+                                          -IncludeEqual | Where-Object {$_.SideIndicator -ne "=="}
+
+
+            if (-not ($null -eq $icaclsMatch)) {
                 Write-Status -Status WARN -Message "Permissions require updating." -Indent 1
                 $aclChangeRequired = $true
             } else {

@@ -53,7 +53,7 @@ D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;
 "@
 
 # Comparison string for icacls (Get-Acl Sddl is not reliable for this).
-$aclComparisonString = @"
+$aclComparisonArray = @"
 C:\inetpub NT SERVICE\TrustedInstaller:(F)
            NT SERVICE\TrustedInstaller:(OI)(CI)(IO)(F)
            NT AUTHORITY\SYSTEM:(F)
@@ -90,7 +90,7 @@ try {
             if ($LASTEXITCODE -ne 0) { throw }
 
 
-            $icaclsMatch = Compare-Object -ReferenceObject ($aclComparisonString | ForEach-Object {$_.Trim()} | Where-Object {$_.Length -gt 0}) `
+            $icaclsMatch = Compare-Object -ReferenceObject ($aclComparisonArray | ForEach-Object {$_.Trim()} | Where-Object {$_.Length -gt 0}) `
                                           -DifferenceObject ($icaclsCurrent | Select-Object -SkipLast 2 | ForEach-Object {$_.Trim()} | Where-Object {$_.Length -gt 0}) `
                                           -IncludeEqual | Where-Object {$_.SideIndicator -ne "=="}
 

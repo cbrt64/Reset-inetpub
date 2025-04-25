@@ -89,10 +89,9 @@ try {
             $icaclsCurrent = icacls "$targetPath"
             if ($LASTEXITCODE -ne 0) { throw }
 
-            # Compare against a current icacls summary as (Get-Acl).Sddl is not consistent
-            # across different machines.
+            # Compare against a current icacls summary as (Get-Acl).Sddl is not consistent across multiple machines.
             # Skip 2 as the last two lines are blank followed by a summary.
-            $icaclsMatch = ($icaclsCurrent | Select-Object -SkipLast 2) -join [System.Environment]::NewLine -eq $aclComparisonString
+            $icaclsMatch = (($icaclsCurrent | Select-Object -SkipLast 2 | ForEach-Object {$_.TrimEnd()}) -join [Environment]::NewLine) -eq $aclComparisonString
 
             if (-not $icaclsMatch) {
                 Write-Status -Status WARN -Message "Permissions require updating." -Indent 1

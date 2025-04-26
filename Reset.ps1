@@ -51,6 +51,47 @@ param (
     [switch] $NoWait
 )
 
+function Write-Status {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true, Position=0)]
+        [ValidateSet("INFO", "ACTION", "OK", "FAIL", "WARN", IgnoreCase=$true)]
+        [string] $Status,
+
+        [Parameter(Mandatory=$true, Position=1)]
+        [ValidateNotNullOrEmpty()]
+        [string] $Message,
+
+        [int] $Indent = 0
+    )
+
+        $okPrefix = "[OK]"
+        $failPrefix = "[FAIL]"
+        $warningPrefix = "[WARN]"
+        $actionPrefix = "[>>]"
+        $infoPrefix = "[i]"
+
+        switch ($Status.ToUpperInvariant()) {
+            "ACTION" {$prefix=$actionPrefix;$colour="Blue"}
+            "OK" {$prefix=$okPrefix;$colour="Green"}
+            "FAIL" {$prefix=$failPrefix;$colour="Red"}
+            "WARN" {$prefix=$warningPrefix;$colour="Yellow"}
+            "INFO" {$prefix=$infoPrefix; $colour="White"}
+            default {$prefix=$null; $colour="White"}
+        }
+
+        if ($Indent -gt 0) {
+            Write-Host ("`t" * $Indent) -NoNewline
+        }
+
+        if ($prefix) {
+            Write-Host $prefix -ForegroundColor $colour -NoNewline
+            $Message = " $Message"
+        }
+
+        Write-Host $Message
+}
+
 Clear-Host
 
 # SYSTEMDRIVE:\inetpub

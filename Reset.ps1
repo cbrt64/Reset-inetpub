@@ -226,17 +226,21 @@ try {
     Write-Status -Status FAIL -Message $_.Exception.Message -Indent 1
     $scriptErrorOccurred = $true
 } finally {
+    
+    Write-Host
+
     $statusParams = @{}
     if ($scriptErrorOccurred) {
         $statusParams.Status = "FAIL"; $statusParams.Message = "Script execution completed with error(s)."
     } else {
         $statusParams.Status = "OK"; $statusParams.Message = "Script execution completed successfully."
     }
+
     Write-Status @statusParams
 
+    # Pause on exit.
     if (-not($NoWait)) {
-        # Pause on exit.
-        Write-Host "`nPress any key to continue..."
+        Write-Status -Status ACTION -Message "Press any key to continue..."
         $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
 }

@@ -212,6 +212,7 @@ try {
                 $aclFile | Remove-Item -Force -ErrorAction SilentlyContinue
             }
         }
+        
         if ($aclOwnerChangeRequired) {
             try {
                 Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to '$expectedOwner'"

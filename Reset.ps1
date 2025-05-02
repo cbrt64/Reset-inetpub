@@ -188,7 +188,7 @@ try {
 
         # Directory exists and is empty.
         } else {
-            Write-Status -Status OK -Message "'$targetPath' exists and is empty."
+            Write-Status -Status OK -Message "'$targetPath' exists and is empty." -Indent 1
         }
 
         if ($aclChangeRequired) {

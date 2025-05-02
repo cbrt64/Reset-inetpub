@@ -190,9 +190,10 @@ try {
                 Write-Status -Status OK -Message "'$targetPath' exists and is empty."
             }
             if ($aclChangeRequired) {
+
+                Write-Status -Status ACTION -Message "Importing necessary permissions"
+                
                 try {
-                    Write-Status -Status ACTION -Message "Importing necessary permissions"
-            
                     # Create a temporary file for use with icacls restore.
                     $aclFile = New-TemporaryFile -ErrorAction Stop
                     Set-Content -Value $aclImportString -Path $aclFile -Encoding unicode -Force -ErrorAction Stop

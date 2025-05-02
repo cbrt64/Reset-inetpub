@@ -174,53 +174,59 @@ try {
         if (-not ($aclChangeRequired -or $aclOwnerChangeRequired)) {
             Write-Status -Status OK -Message "No changes are required."
             exit 0
-        }
-
-        Write-Status -Status ACTION -Message "Checking contents of '$targetPath'"
-
-        # If the directory isn't empty, provide a warning of the limited scope of the changes.
-        if (Get-ChildItem -Path $targetPath -ErrorAction SilentlyContinue) {
-            Write-Status -Status WARN -Message "'$targetPath' is not empty!" -Indent 1
-            Write-Status -Status WARN -Message "Ownership change to '$expectedOwner' (default setting) will only apply to the parent directory ($targetPath)." -Indent 1
-            Write-Status -Status WARN -Message "This is to prevent any potential issues with permissions that have been manually applied." -Indent 1
-        # Directory exists and is empty.
         } else {
-            Write-Status -Status OK -Message "'$targetPath' exists and is empty."
+
+            Write-Status -Status ACTION -Message "Checking contents of '$targetPath'"
+
+            # If the directory isn't empty, provide a warning of the limited scope of the changes.
+            if (Get-ChildItem -Path $targetPath -ErrorAction SilentlyContinue) {
+                Write-Status -Status WARN -Message "'$targetPath' is not empty!" -Indent 1
+                Write-Status -Status WARN -Message "Ownership and direct permission changes (default settings) will only apply to the parent directory ($targetPath) and will not be applied recursively." -Indent 1
+                Write-Status -Status WARN -Message "However, inheritable permissions from the parent will propagate to subdirectories as expected." -Indent 1
+                Write-Status -Status WARN -Message "This approach helps prevent potential issues with manually applied permissions." -Indent 1                
+
+            # Directory exists and is empty.
+            } else {
+                Write-Status -Status OK -Message "'$targetPath' exists and is empty."
+            }
+            if ($aclChangeRequired) {
+                try {
+                    Write-Status -Status ACTION -Message "Importing necessary permissions"
+            
+                    # Create a temporary file for use with icacls restore.
+                    $aclFile = New-TemporaryFile -ErrorAction Stop
+                    Set-Content -Value $aclImportString -Path $aclFile -Encoding unicode -Force -ErrorAction Stop
+            
+                    # icacls "C:\" /restore path\to\file.tmp
+                    $result = icacls "$env:SystemDrive\" /restore $aclFile.FullName 2>&1
+            
+                    if ($LASTEXITCODE -ne 0) { throw $result } else {
+                        Write-Status -Status OK -Message "Permissions successfully imported." -Indent 1
+                    }
+                } catch {
+                    throw "Failed to import permissions for '$targetPath'. Error $($_.Exception.Message)."
+                } finally {
+                    # Remove the temporary file.
+                    $aclFile | Remove-Item -Force -ErrorAction SilentlyContinue
+                }
+            }
+            if ($aclOwnerChangeRequired) {
+
+                Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to '$expectedOwner'"
+
+                try {
+                    # Set the owner of inetpub to 'NT AUTHORITY\SYSTEM'.
+                    $result = icacls $targetPath /SetOwner "SYSTEM" 2>&1
+            
+                    if ($LASTEXITCODE -ne 0) { throw $result } else {
+                        Write-Status -Status OK -Message "Owner successfully set." -Indent 1
+                    }
+                }
+                catch {
+                    throw "Failed to set owner for '$targetPath'. Error: $($_.Exception.Message)"
+                }
+            }
         }
-    }
-
-    try {
-        Write-Status -Status ACTION -Message "Importing necessary permissions"
-
-        # Create a temporary file for use with icacls restore.
-        $aclFile = New-TemporaryFile -ErrorAction Stop
-        Set-Content -Value $aclImportString -Path $aclFile -Encoding unicode -Force -ErrorAction Stop
-
-        # icacls "C:\" /restore path\to\file.tmp
-        $result = icacls "$env:SystemDrive\" /restore $aclFile.FullName 2>&1
-
-        if ($LASTEXITCODE -ne 0) { throw $result } else {
-            Write-Status -Status OK -Message "Permissions successfully imported." -Indent 1
-        }
-    } catch {
-        throw "Failed to import permissions for '$targetPath'. Error $($_.Exception.Message)."
-    } finally {
-        # Remove the temporary file.
-        $aclFile | Remove-Item -Force -ErrorAction SilentlyContinue
-    }
-
-    Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to '$expectedOwner'"
-
-    try {
-        # Set the owner of inetpub to 'NT AUTHORITY\SYSTEM'.
-        $result = icacls $targetPath /SetOwner "SYSTEM" 2>&1
-
-        if ($LASTEXITCODE -ne 0) { throw $result } else {
-            Write-Status -Status OK -Message "Owner successfully set." -Indent 1
-        }
-    }
-    catch {
-        throw "Failed to set owner for '$targetPath'. Error: $($_.Exception.Message)"
     }
 } catch {
     Write-Status -Status FAIL -Message $_.Exception.Message -Indent 1
@@ -229,13 +235,7 @@ try {
     
     Write-Host
 
-    $statusParams = @{}
-    if ($scriptErrorOccurred) {
-        $statusParams.Status = "FAIL"; $statusParams.Message = "Script execution completed with error(s)."
-    } else {
-        $statusParams.Status = "OK"; $statusParams.Message = "Script execution completed successfully."
-    }
-
+    $statusParams = @{ Status = if ($scriptErrorOccurred) { "FAIL" } else { "OK" }; Message = if ($scriptErrorOccurred) { "Script execution completed with error(s)." } else { "Script execution completed successfully." } }
     Write-Status @statusParams
 
     # Pause on exit.

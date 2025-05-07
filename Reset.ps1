@@ -3,7 +3,7 @@
 Restores the %SYSTEMDRIVE%\inetpub directory and resets its default security permissions and ownership.
 
 .DESCRIPTION
-This script addresses the creation of the %SYSTEMDRIVE%\inetpub directory introduced by Windows update KB5055523 as a mitigation for CVE-2025-21204.
+This script addresses the creation of the %SYSTEMDRIVE%\inetpub directory introduced by Windows update KB5055523 as a mitigation for CVE-2025-2120.
 It facilitates the restoration of this directory and its required permissions for users who may have previously deleted it, without necessitating the enablement or disablement of IIS features.
 
 The script performs the following actions:
@@ -42,7 +42,7 @@ Warning:     This script modifies file system permissions and ownership on the %
 .LINK
 GitHub Repository: https://github.com/mmotti/Reset-inetpub
 KB5055523: https://support.microsoft.com/en-gb/topic/april-8-2025-kb5055523-os-build-26100-3775-277a9d11-6ebf-410c-99f7-8c61957461eb
-CVE-2025-21204: https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-21204
+CVE-2025-2120: https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-2120
 #>
 #Requires -RunAsAdministrator
 
@@ -103,152 +103,137 @@ $(Split-Path -Path $targetPath -Leaf)
 D:PAI(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;OICIIO;GA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;FA;;;SY)(A;OICIIO;GA;;;SY)(A;;FA;;;BA)(A;OICIIO;GA;;;BA)(A;;0x1200a9;;;BU)(A;OICIIO;GXGR;;;BU)(A;OICIIO;GA;;;CO)S:AINO_ACCESS_CONTROL
 "@
 
-# Comparison string for icacls (Get-Acl Sddl is not reliable for this).
-$aclComparisonArray = @"
-C:\inetpub NT SERVICE\TrustedInstaller:(F)
-           NT SERVICE\TrustedInstaller:(OI)(CI)(IO)(F)
-           NT AUTHORITY\SYSTEM:(F)
-           NT AUTHORITY\SYSTEM:(OI)(CI)(IO)(F)
-           BUILTIN\Administrators:(F)
-           BUILTIN\Administrators:(OI)(CI)(IO)(F)
-           BUILTIN\Users:(RX)
-           BUILTIN\Users:(OI)(CI)(IO)(GR,GE)
-           CREATOR OWNER:(OI)(CI)(IO)(F)
-"@  -replace '(?m)^[A-Z]:(\\inetpub)', "$env:SYSTEMDRIVE`$1" -split '\r?\n'
+$sddlComparisonString = "O:SYG:SYD:PAI(A;OICIIO;GA;;;CO)(A;OICIIO;GA;;;SY)(A;;FA;;;SY)(A;OICIIO;GA;;;BA)(A;;FA;;;BA)(A;OICIIO;GXGR;;;BU)(A;;0x1200a9;;;BU)(A;OICIIO;GA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)(A;;FA;;;S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464)"
 
 $aclChangeRequired = $false
 $aclOwnerChangeRequired = $false
-$expectedOwner = "NT AUTHORITY\SYSTEM"
+$aclGroupChangeRequired = $false
+$expectedOwnerString = "NT AUTHORITY\SYSTEM"
+
+
+$desiredAccount = $null
 $scriptErrorOccurred = $false
 
 try {
-    # Directory doesn't exist.
+    try {
+        $desiredAccount = New-Object System.Security.Principal.NTAccount($expectedOwnerString)
+    }
+    catch {
+        throw "Failed to create NTAccount object for owner '$expectedOwnerString'. Error: $($_.Exception.Message)"
+    }
+
     if (-not(Test-Path -Path $targetPath -PathType Container)) {
-        try {
-            Write-Status -Status ACTION -Message "Creating directory '$targetPath'"
-            New-Item -Path $targetPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
-            $aclChangeRequired = $true; $aclOwnerChangeRequired = $true
-            Write-Status -Status OK -Message "Directory created." -Indent 1
-        }
-        catch {
-            throw "Unable to create directory: $targetPath"
-        }
-    # Directory exists.
+        Write-Status -Status ACTION -Message "Creating directory '$targetPath'"
+        New-Item -Path $targetPath -ItemType Directory -Force -ErrorAction Stop | Out-Null
+        $aclChangeRequired = $true; $aclOwnerChangeRequired = $true; $aclGroupChangeRequired = $true
+        Write-Status -Status OK -Message "Directory created." -Indent 1
     } else {
+        Write-Status -Status ACTION -Message "Checking permissions of '$targetPath'"
+        $currentACL = $null
         try {
-            Write-Status -Status ACTION -Message "Checking permissions of '$targetPath'"
-
-            $icaclsCurrent = icacls "$targetPath"
-            if ($LASTEXITCODE -ne 0) { throw }
-
-
-            $icaclsMatch = Compare-Object -ReferenceObject ($aclComparisonArray | ForEach-Object {$_.Trim()} | Where-Object {$_.Length -gt 0}) `
-                                          -DifferenceObject ($icaclsCurrent | Select-Object -SkipLast 2 | ForEach-Object {$_.Trim()} | Where-Object {$_.Length -gt 0}) `
-                                          -IncludeEqual | Where-Object {$_.SideIndicator -ne "=="}
-
-
-            if (-not ($null -eq $icaclsMatch)) {
-                Write-Status -Status WARN -Message "Permissions require updating." -Indent 1
-                $aclChangeRequired = $true
-            } else {
-                Write-Status -Status OK -Message "Permissions verified." -Indent 1
-            }
-
-            Write-Status -Status ACTION -Message "Checking the owner of '$targetPath'"
-
-            $currentOwner = (Get-Acl $targetPath -ErrorAction Stop).Owner
-
-            if ($currentOwner -ine $expectedOwner) {
-                Write-Status -Status WARN -Message "Ownership requires updating." -Indent 1
-                $aclOwnerChangeRequired = $true
-            } else {
-                Write-Status -Status OK -Message "Ownership verified." -Indent 1
-            }
+            $currentACL = Get-Acl -Path $targetPath -ErrorAction Stop
         }
         catch {
-            Write-Status -Status WARN -Message "Unable to determine current permissions. Assuming an update is required." -Indent 1
-            $aclChangeRequired = $true; $aclOwnerChangeRequired = $true
+            Write-Status -Status WARN -Message "Unable to determine permissions for '$targetPath' due to error: $($_.Exception.Message). Assuming an update is required for all components." -Indent 1
+            $aclChangeRequired = $true; $aclOwnerChangeRequired = $true; $aclGroupChangeRequired = $true
+        }
+
+        if ($currentACL) {
+            if ($currentACL.Sddl -eq $sddlComparisonString) {
+                Write-Status -Status OK -Message "Permissions verified." -Indent 1
+            } else {
+                Write-Status -Status WARN -Message "Permissions require updating (SDDL mismatch)." -Indent 1
+                $aclChangeRequired = $true
+
+                Write-Status -Status ACTION -Message "Checking the owner of '$targetPath'"
+
+                if ($currentACL.Owner -ne $desiredAccount.Value) {
+                    Write-Status -Status WARN -Message "Ownership requires updating." -Indent 1
+                    $aclOwnerChangeRequired = $true
+                } else {
+                    Write-Status -Status OK -Message "Ownership verified." -Indent 1
+                }
+
+                Write-Status -Status ACTION -Message "Checking the primary group of '$targetPath'"
+
+                if ($currentACL.Group -ne $desiredAccount.Value) {
+                    Write-Status -Status WARN -Message "Primary group requires updating." -Indent 1
+                    $aclGroupChangeRequired = $true
+                } else {
+                    Write-Status -Status OK -Message "Primary group verified." -Indent 1
+                }
+            }
         }
     }
 
-    # Early exit if we've determined that no changes are required.
-    if (-not ($aclChangeRequired -or $aclOwnerChangeRequired)) {
+    if (-not ($aclGroupChangeRequired -or $aclChangeRequired -or $aclOwnerChangeRequired)) {
         Write-Status -Status OK -Message "No changes are required."
         exit 0
     } else {
 
-        Write-Status -Status ACTION -Message "Checking contents of '$targetPath'"
+        Write-Status -Status ACTION -Message "Checking contents of '$targetPath' before applying changes."
 
-        # If the directory isn't empty, provide a warning of the limited scope of the changes.
         if (Get-ChildItem -Path $targetPath -ErrorAction SilentlyContinue) {
             Write-Status -Status WARN -Message "'$targetPath' is not empty!" -Indent 1
             Write-Status -Status WARN -Message "Ownership and direct permission changes (default settings) will only apply to the parent directory ($targetPath) and will not be applied recursively." -Indent 1
             Write-Status -Status WARN -Message "However, inheritable permissions from the parent will propagate to subdirectories as expected." -Indent 1
             Write-Status -Status WARN -Message "This approach helps prevent potential issues with manually applied permissions." -Indent 1
-
-        # Directory exists and is empty.
         } else {
             Write-Status -Status OK -Message "'$targetPath' exists and is empty." -Indent 1
         }
 
+        if ($aclGroupChangeRequired) {
+            Write-Status -Status ACTION -Message "Setting the primary group of '$targetPath' to '$($desiredAccount.Value)'."
+            $groupACL = Get-Acl -Path $targetPath -ErrorAction Stop
+            $groupACL.SetGroup($desiredAccount)
+            Set-Acl -Path $targetPath -AclObject $groupACL -ErrorAction Stop
+            Write-Status -Status OK -Message "Primary group successfully set." -Indent 1
+        }
+
         if ($aclChangeRequired) {
+            Write-Status -Status ACTION -Message "Importing necessary permissions"
+            $aclFile = $null
             try {
-                Write-Status -Status ACTION -Message "Importing necessary permissions"
-
-                # Create a temporary file for use with icacls restore.
                 $aclFile = New-TemporaryFile -ErrorAction Stop
-                Set-Content -Value $aclImportString -Path $aclFile -Encoding unicode -Force -ErrorAction Stop
-
-                # icacls "C:\" /restore path\to\file.tmp
+                Set-Content -Value $aclImportString -Path $aclFile.FullName -Encoding unicode -Force -ErrorAction Stop
                 $result = icacls "$env:SystemDrive\" /restore $aclFile.FullName 2>&1
-
-                if ($LASTEXITCODE -ne 0) { throw $result } else {
-                    Write-Status -Status OK -Message "Permissions successfully imported." -Indent 1
+                if ($LASTEXITCODE -ne 0) {
+                    throw "icacls /restore failed for '$targetPath'. Output: $result"
                 }
-            } catch {
-                throw "Failed to import permissions for '$targetPath'. Error $($_.Exception.Message)."
+                Write-Status -Status OK -Message "Permissions successfully imported." -Indent 1
             } finally {
-                # Remove the temporary file.
-                $aclFile | Remove-Item -Force -ErrorAction SilentlyContinue
+                if ($aclFile) { $aclFile | Remove-Item -Force -ErrorAction SilentlyContinue }
             }
         }
-        
+
         if ($aclOwnerChangeRequired) {
-            try {
-                Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to '$expectedOwner'"
-
-                # Set the owner of inetpub to 'NT AUTHORITY\SYSTEM'.
-                $result = icacls $targetPath /SetOwner "SYSTEM" 2>&1
-
-                if ($LASTEXITCODE -ne 0) { throw $result } else {
-                    Write-Status -Status OK -Message "Owner successfully set." -Indent 1
-                }
+            Write-Status -Status ACTION -Message "Setting owner of '$targetPath' to '$expectedOwnerString'"
+            $result = icacls $targetPath /SetOwner "SYSTEM" 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                throw "icacls /SetOwner failed for '$targetPath'. Output: $result"
             }
-            catch {
-                throw "Failed to set owner for '$targetPath'. Error: $($_.Exception.Message)"
-            }
+            Write-Status -Status OK -Message "Owner successfully set." -Indent 1
         }
     }
-
 } catch {
-    Write-Status -Status FAIL -Message $_.Exception.Message -Indent 1
+    Write-Status -Status FAIL -Message "An error occurred: $($_.Exception.Message)" -Indent 1
     $scriptErrorOccurred = $true
 } finally {
-
     Write-Host
-
-    $statusParams = @{ Status = if ($scriptErrorOccurred) { "FAIL" } else { "OK" }; Message = if ($scriptErrorOccurred) { "Script execution completed with error(s)." } else { "Script execution completed successfully." } }
+    $statusParams = @{
+        Status = if ($scriptErrorOccurred) { "FAIL" } else { "OK" }
+        Message = if ($scriptErrorOccurred) { "Script execution completed with error(s)." } else { "Script execution completed successfully." }
+    }
     Write-Status @statusParams
 
-    # Pause on exit.
     if (-not($NoWait)) {
-        Write-Status -Status ACTION -Message "Press any key to continue..."
-        $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        if ($host.UI.RawUI -and ($host.UI.RawUI | Get-Member -Name "ReadKey" -MemberType Method)) {
+            Write-Status -Status ACTION -Message "Press any key to continue..."
+            $null = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        } else {
+            Read-Host "[>>] Press enter to continue..."
+        }
     }
 }
 
-# Conditional exit code based on whether an error occurred.
-switch ($scriptErrorOccurred) {
-    $true {exit 1}
-    $false {exit 0}
-}
+if ($scriptErrorOccurred) { exit 1 } else { exit 0 }

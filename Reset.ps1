@@ -108,11 +108,9 @@ $sddlComparisonString = "O:SYG:SYD:PAI(A;OICIIO;GA;;;CO)(A;OICIIO;GA;;;SY)(A;;FA
 $aclChangeRequired = $false
 $aclOwnerChangeRequired = $false
 $aclGroupChangeRequired = $false
-$expectedOwnerString = "NT AUTHORITY\SYSTEM"
-
-
-$desiredAccount = $null
 $scriptErrorOccurred = $false
+$desiredAccount = $null
+$expectedOwnerString = "NT AUTHORITY\SYSTEM"
 
 try {
     try {

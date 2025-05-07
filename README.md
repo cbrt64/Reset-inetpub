@@ -1,6 +1,6 @@
 # Reset inetpub
 
-This script restores the `%SYSTEMDRIVE%\inetpub` folder and its default security permissions, which are necessary as a mitigation for [CVE-2025-2120](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-2120) following the [KB5055523](https://support.microsoft.com/en-gb/topic/april-8-2025-kb5055523-os-build-26100-3775-277a9d11-6ebf-410c-99f7-8c61957461eb) Windows update.
+This script restores the `%SYSTEMDRIVE%\inetpub` folder and its default security permissions, which are necessary as a mitigation for [CVE-2025-21204](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-21204) following the [KB5055523](https://support.microsoft.com/en-gb/topic/april-8-2025-kb5055523-os-build-26100-3775-277a9d11-6ebf-410c-99f7-8c61957461eb) Windows update.
 
 It's intended for users who may have deleted this folder before understanding its security purpose and wish to restore it without needing to enable/disable IIS features.
 

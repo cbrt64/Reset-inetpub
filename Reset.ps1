@@ -3,7 +3,7 @@
 Restores the %SYSTEMDRIVE%\inetpub directory and resets its default security permissions and ownership.
 
 .DESCRIPTION
-This script addresses the creation of the %SYSTEMDRIVE%\inetpub directory introduced by Windows update KB5055523 as a mitigation for CVE-2025-2120.
+This script addresses the creation of the %SYSTEMDRIVE%\inetpub directory introduced by Windows update KB5055523 as a mitigation for CVE-2025-21204.
 It facilitates the restoration of this directory and its required permissions for users who may have previously deleted it, without necessitating the enablement or disablement of IIS features.
 
 The script performs the following actions:
@@ -42,7 +42,7 @@ Warning:     This script modifies file system permissions and ownership on the %
 .LINK
 GitHub Repository: https://github.com/mmotti/Reset-inetpub
 KB5055523: https://support.microsoft.com/en-gb/topic/april-8-2025-kb5055523-os-build-26100-3775-277a9d11-6ebf-410c-99f7-8c61957461eb
-CVE-2025-2120: https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-2120
+CVE-2025-21204: https://msrc.microsoft.com/update-guide/vulnerability/CVE-2025-21204
 #>
 #Requires -RunAsAdministrator
 
@@ -131,7 +131,7 @@ try {
             Write-Status -Status OK -Message "Directory created." -Indent 1
         }
         catch {
-            throw "Unable to to create directory: $targetPath"
+            throw "Unable to create directory: $targetPath"
         }
     # Directory exists.
     } else {
